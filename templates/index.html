@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <title>Tracker</title>
+
+  <!-- Roboto Mono alleen voor cijfers -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap"
+    rel="stylesheet"
+  >
+
+  <style>
+    body {
+      margin: 20px;
+      /* geen font-family hier -> browser default */
+      font-size: 16px;
+    }
+
+    /* Cijfers: Roboto Mono, kleiner en niet vet */
+    .value {
+      font-family: "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+                   Consolas, "Liberation Mono", "Courier New", monospace;
+      font-weight: normal;
+      font-size: 0.875rem;
+    }
+
+    /* Euroteken: expliciet géén Roboto Mono, terug naar default stack */
+    .currency-symbol {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+                   sans-serif;
+      font-weight: normal;
+      font-size: 1rem;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      max-width: 320px;
+    }
+    .name {
+      flex: 1;
+    }
+    .amount {
+      width: 120px;
+      text-align: right;
+    }
+    hr {
+      max-width: 320px;
+      margin-left: 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Tracker</h1>
+  <p>Laatst bijgewerkt: <span id="timestamp">-</span></p>
+  <p>Volgende update over: <span id="next-update">-</span> seconden</p>
+
+  <div class="row">
+    <span class="name">MSCI Global Semiconductors</span>
+    <span id="seme-total" class="amount">-</span>
+  </div>
+  <div class="row">
+    <span class="name">S&amp;P500 ETF</span>
+    <span id="vuaa-total" class="amount">-</span>
+  </div>
+  <div class="row">
+    <span class="name">MSWI World ETF</span>
+    <span id="iwda-total" class="amount">-</span>
+  </div>
+  <div class="row">
+    <span class="name">Fondsen</span>
+    <span id="fondsen-total" class="amount">-</span>
+  </div>
+  <div class="row">
+    <span class="name">Bitcoin (BTC)</span>
+    <span id="btc-total" class="amount">-</span>
+  </div>
+  <div class="row">
+    <span class="name">PEPE</span>
+    <span id="pepe-total" class="amount">-</span>
+  </div>
+
+  <hr>
+
+  <div class="row">
+    <span class="name">Totaal</span>
+    <span id="total-portfolio" class="amount">-</span>
+  </div>
+
+  <script>
+    // Vul hier jouw aantallen in
+    const HOLDINGS = {
+      SEME: 33.68,
+      VUAA: 2.89,
+      IWDA: 5.81,
+      BTC:  0.00490532 + 0.00094041, // aantal BTC
+      PEPE: 17172087.6904            // aantal PEPE tokens
+    };
+
+    // volgende hele minuut (seconde 0)
+    function getNextMinuteSlot() {
+      const now = new Date();
+      const next = new Date(now.getTime());
+      next.setSeconds(0, 0);
+      if (next <= now) {
+        next.setMinutes(next.getMinutes() + 1);
+      }
+      return next;
+    }
+
+    let nextUpdateTimeMs = getNextMinuteSlot().getTime();
+
+    function formatEuro(value) {
+      return (
+        '<span class="value">' + value.toFixed(2) + '</span>' +
+        '<span class="currency-symbol"> €</span>'
+      );
+    }
+
+    async function fetchPrices() {
+      try {
+        const response = await fetch("/api/prices");
+        const data = await response.json();
+
+        document.getElementById("timestamp").textContent = data.timestamp || "-";
+
+        const prices = data.prices || {};
+
+        const semePrice   = prices.SEME    ?? null;
+        const vuaaPrice   = prices.VUAA    ?? null;
+        const iwdaPrice   = prices.IWDA    ?? null;
+        const btcPrice    = prices.BTC     ?? null;
+        const pepePrice   = prices.PEPE    ?? null;
+        const fondsenVal  = prices.Fondsen ?? null;
+
+        let semeTotal    = null;
+        let vuaaTotal    = null;
+        let iwdaTotal    = null;
+        let btcTotal     = null;
+        let pepeTotal    = null;
+        let fondsenTotal = null;
+
+        if (semePrice != null) {
+          semeTotal = semePrice * HOLDINGS.SEME;
+          document.getElementById("seme-total").innerHTML =
+            formatEuro(semeTotal);
+        } else {
+          document.getElementById("seme-total").textContent = "-";
+        }
+
+        if (vuaaPrice != null) {
+          vuaaTotal = vuaaPrice * HOLDINGS.VUAA;
+          document.getElementById("vuaa-total").innerHTML =
+            formatEuro(vuaaTotal);
+        } else {
+          document.getElementById("vuaa-total").textContent = "-";
+        }
+
+        if (iwdaPrice != null) {
+          iwdaTotal = iwdaPrice * HOLDINGS.IWDA;
+          document.getElementById("iwda-total").innerHTML =
+            formatEuro(iwdaTotal);
+        } else {
+          document.getElementById("iwda-total").textContent = "-";
+        }
+
+        if (btcPrice != null) {
+          btcTotal = btcPrice * HOLDINGS.BTC;
+          document.getElementById("btc-total").innerHTML =
+            formatEuro(btcTotal);
+        } else {
+          document.getElementById("btc-total").textContent = "-";
+        }
+
+        if (pepePrice != null) {
+          pepeTotal = pepePrice * HOLDINGS.PEPE;
+          document.getElementById("pepe-total").innerHTML =
+            formatEuro(pepeTotal);
+        } else {
+          document.getElementById("pepe-total").textContent = "-";
+        }
+
+        if (fondsenVal != null) {
+          fondsenTotal = fondsenVal;
+          document.getElementById("fondsen-total").innerHTML =
+            formatEuro(fondsenTotal);
+        } else {
+          document.getElementById("fondsen-total").textContent = "-";
+        }
+
+        const totals = [
+          semeTotal,
+          vuaaTotal,
+          iwdaTotal,
+          btcTotal,
+          pepeTotal,
+          fondsenTotal
+        ].filter(v => v != null);
+
+        if (totals.length > 0) {
+          const portfolioTotal = totals.reduce((a, b) => a + b, 0);
+          document.getElementById("total-portfolio").innerHTML =
+            formatEuro(portfolioTotal);
+        } else {
+          document.getElementById("total-portfolio").textContent = "-";
+        }
+
+        nextUpdateTimeMs = getNextMinuteSlot().getTime();
+      } catch (err) {
+        console.error("Fout bij ophalen prijzen:", err);
+      }
+    }
+
+    function updateCountdown() {
+      const el = document.getElementById("next-update");
+      const now = Date.now();
+      let diffMs = nextUpdateTimeMs - now;
+
+      if (diffMs <= 0) {
+        el.textContent = 0;
+        fetchPrices();
+        nextUpdateTimeMs = getNextMinuteSlot().getTime();
+        return;
+      }
+
+      const diffSec = Math.floor(diffMs / 1000);
+      el.textContent = diffSec;
+    }
+
+    function startLoop() {
+      fetchPrices();
+      setInterval(updateCountdown, 1000);
+    }
+
+    startLoop();
+  </script>
+</body>
+</html>
+
+
